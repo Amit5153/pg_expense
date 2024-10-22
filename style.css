@@ -225,3 +225,24 @@ button.cancel:hover {
     visibility: hidden;
     opacity: 0; /* Fade out */
 }
+
+.expense-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+.expense-table th, .expense-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.expense-table th {
+    background-color: #ff4e50;
+    color: white;
+}
+
+.expense-table tbody tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
