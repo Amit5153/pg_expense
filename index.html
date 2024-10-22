@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
     <title> PG  Expense </title>
+    <button id="downloadPDF" onclick="downloadPDF()">Download PDF</button>
+        <button id="downloadCSV" onclick="downloadCSV()">Download CSV</button>
+       
 </head>
 <body>
     <div>
@@ -15,6 +18,7 @@
                 <option value="PG1">PG 1</option>
                 <option value="PG2">PG 2</option>
             </select>
+            
         
             <label for="expenseType">Expense Type:</label>
             <input type="text" id="expenseType" placeholder="e.g., Groceries" required />
@@ -34,14 +38,21 @@
     
         <div id="expenseList"></div>
         <h3>Total Expenses: <span id="totalExpensesDisplay">₹0.00</span></h3>
+        
     
         <canvas id="expenseChart"></canvas>
     
         <div id="toast" class="toast"></div>
     </div>
 
+   
+
     <!-- Include Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+
     <!-- <canvas id="expenseChart" width="400" height="200"></canvas> -->
     <!-- Link to your JavaScript file -->
     <script src="app.js"></script>
