@@ -310,69 +310,83 @@ function downloadPDF() {
     doc.setFontSize(18);
     doc.text("Expense Report", 14, 10);
     doc.setFontSize(12);
-    doc.text(`For: ${selectedMonth}`, 14, 15);
+    doc.text(`For: ${selectedMonth}`, 14, 18);
 
     // Table Headers
-    const headers = ["PG", "Type", "Amount(₹)", "Date"];
+    const headers = ["PG", "Type", "Amount", "Date"];
     const data = expenses.filter(exp => exp.month === selectedMonth);
 
-    // Create Table
-    const startY = 30; // Starting Y position for table
-    const startX = 14; // Starting X position for table
-    const columnWidths = [40, 40, 40, 40]; // Set column widths
+    // Table settings
+    const startY = 30;
+    const startX = 14;
+    const columnWidths = [30, 50, 40, 50];
     const rowHeight = 10;
 
-    // Draw Header
+    // Draw Header with background
     headers.forEach((header, index) => {
-        doc.setFillColor(255, 99, 132); // Header background color
-        doc.rect(startX + index * columnWidths[index], startY, columnWidths[index], rowHeight, 'F'); // Fill rectangle
-        doc.setTextColor(255); // Set text color to white
-        doc.text(header, startX + index * columnWidths[index] + 5, startY + 7); // Header text
+        doc.setFillColor(60, 130, 200); // Blue background for header
+        const headerX = startX + columnWidths.slice(0, index).reduce((a, b) => a + b, 0);
+        doc.rect(headerX, startY, columnWidths[index], rowHeight, 'F');
+        doc.setTextColor(255);
+        doc.text(header, headerX + 2, startY + 7);
     });
 
-    // Draw Data Rows
-    doc.setTextColor(0); // Reset text color to black
+    // Draw Data Rows with alternating colors
+    doc.setTextColor(0);
     let totalPG1 = 0;
     let totalPG2 = 0;
 
     data.forEach((row, rowIndex) => {
-        const fillColor = row.pg === "PG1" ? [235, 236, 240] : [255, 243, 220]; // Alternating colors based on PG
+        const rowY = startY + (rowIndex + 1) * rowHeight;
+        const fillColor = rowIndex % 2 === 0 ? [245, 245, 245] : [255, 255, 255]; // Alternating row color
         doc.setFillColor(...fillColor);
-        doc.rect(startX, startY + (rowIndex + 1) * rowHeight, columnWidths.reduce((a, b) => a + b, 0), rowHeight, 'F'); // Fill rectangle
-    
+        doc.rect(startX, rowY, columnWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
+
         // Add cell data
-        doc.text(row.pg, startX, startY + (rowIndex + 1) * rowHeight + 7); // PG
-        doc.text(row.type, startX + columnWidths[0], startY + (rowIndex + 1) * rowHeight + 7); // Type
-        doc.text(row.amount.toFixed(2), startX + columnWidths[0] + columnWidths[1], startY + (rowIndex + 1) * rowHeight + 7); // Amount
-        doc.text(row.date, startX + columnWidths[0] + columnWidths[1] + columnWidths[2], startY + (rowIndex + 1) * rowHeight + 7); // Date
-    
-        // Draw borders
+        doc.text(row.pg, startX + 2, rowY + 7);
+        doc.text(row.type, startX + columnWidths[0] + 2, rowY + 7);
+        doc.text(`${row.amount.toFixed(2)}`, startX + columnWidths[0] + columnWidths[1] + 2, rowY + 7);
+        doc.text(row.date, startX + columnWidths[0] + columnWidths[1] + columnWidths[2] + 2, rowY + 7);
+
+        // Draw cell borders
         headers.forEach((_, cellIndex) => {
-            doc.rect(startX + cellIndex * columnWidths[cellIndex], startY + (rowIndex + 1) * rowHeight, columnWidths[cellIndex], rowHeight);
+            const cellX = startX + columnWidths.slice(0, cellIndex).reduce((a, b) => a + b, 0);
+            doc.rect(cellX, rowY, columnWidths[cellIndex], rowHeight);
         });
-    
-        // Calculate totals for PG1 and PG2
+
+        // Calculate totals
         if (row.pg === "PG1") {
             totalPG1 += row.amount;
         } else if (row.pg === "PG2") {
             totalPG2 += row.amount;
         }
     });
-    
 
-    // Draw the bottom border for the data
-    headers.forEach((_, index) => {
-        doc.rect(startX + index * columnWidths[index], startY, columnWidths[index], (data.length + 1) * rowHeight);
-    });
+    // Footer Section with totals
+    const footerY = startY + (data.length + 1) * rowHeight + 10;
+    doc.setFillColor(220, 220, 220); // Light grey background for footer row
+    doc.rect(startX, footerY, columnWidths.reduce((a, b) => a + b, 0), rowHeight * 1.5, 'F');
 
-    // Add Total Expenses Section
+    // Footer content - Totals for PG1, PG2, and Grand Total
+    const totalSum = totalPG1 + totalPG2;
+    const footerTextY = footerY + rowHeight;
+
+    doc.setTextColor(0);
+    doc.setFontSize(12);
+    doc.text("Total PG1:", startX + 2, footerTextY);
+    doc.text(`${totalPG1.toFixed(2)}`, startX + columnWidths[0] + 10, footerTextY);
+
+    doc.text("Total PG2:", startX + columnWidths[0] + columnWidths[1] + 10, footerTextY);
+    doc.text(`${totalPG2.toFixed(2)}`, startX + columnWidths[0] + columnWidths[1] + columnWidths[2] + 10, footerTextY);
+
+    // Grand Total Box
+    const totalBoxY = footerY + rowHeight * 1.8;
+    doc.setFillColor(255, 230, 180); // Light yellow background for grand total box
+    doc.rect(startX, totalBoxY, columnWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
+
     doc.setFontSize(14);
     doc.setTextColor(0);
-    doc.text("Total Expenses", startX, startY + (data.length + 2) * rowHeight); // Total Expenses Title
-
-    doc.setFontSize(12);
-    doc.text(`PG1 Total: ₹${totalPG1.toFixed(2)}`, startX, startY + (data.length + 3) * rowHeight);
-    doc.text(`PG2 Total: ₹${totalPG2.toFixed(2)}`, startX, startY + (data.length + 4) * rowHeight);
+    doc.text(`Grand Total: ${totalSum.toFixed(2)}`, startX + 1, totalBoxY + 7);
 
     // Save PDF
     doc.save(`${selectedMonth}-expenses-report.pdf`);
