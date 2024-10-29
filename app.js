@@ -305,88 +305,124 @@ function downloadPDF() {
     const doc = new jsPDF();
 
     const selectedMonth = document.getElementById('monthFilter').value;
+    const generatedDate = new Date().toLocaleDateString('en-GB'); // Format: DD/MM/YYYY
 
-    // Table Title
-    doc.setFontSize(18);
-    doc.text("Expense Report", 14, 10);
+    // Header: Title and Month
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text("Expense Report", 14, 15);
     doc.setFontSize(12);
-    doc.text(`For: ${selectedMonth}`, 14, 18);
+    doc.setFont("helvetica", "normal");
+    doc.text(`For: ${selectedMonth}`, 14, 25);
 
-    // Table Headers
+    // Table Headers and layout configurations
     const headers = ["PG", "Type", "Amount", "Date"];
     const data = expenses.filter(exp => exp.month === selectedMonth);
 
-    // Table settings
-    const startY = 30;
     const startX = 14;
     const columnWidths = [30, 50, 40, 50];
     const rowHeight = 10;
+    const pageHeight = 280; // Height limit for page content
 
-    // Draw Header with background
-    headers.forEach((header, index) => {
-        doc.setFillColor(60, 130, 200); // Blue background for header
-        const headerX = startX + columnWidths.slice(0, index).reduce((a, b) => a + b, 0);
-        doc.rect(headerX, startY, columnWidths[index], rowHeight, 'F');
-        doc.setTextColor(255);
-        doc.text(header, headerX + 2, startY + 7);
-    });
+    let currentY = 35; // Starting Y position
+    let pageIndex = 1;
 
-    // Draw Data Rows with alternating colors
-    doc.setTextColor(0);
+    // Function to add table headers
+    function addTableHeaders(yPosition) {
+        doc.setFont("helvetica", "bold");
+        headers.forEach((header, index) => {
+            doc.setFillColor(60, 130, 200); // Blue background for header
+            const headerX = startX + columnWidths.slice(0, index).reduce((a, b) => a + b, 0);
+            doc.rect(headerX, yPosition, columnWidths[index], rowHeight, 'F');
+            doc.setTextColor(255);
+            doc.text(header, headerX + 2, yPosition + 7);
+        });
+        return yPosition + rowHeight;
+    }
+
+    currentY = addTableHeaders(currentY); // Add headers to the first page
+
+    // Totals
     let totalPG1 = 0;
     let totalPG2 = 0;
 
+    // Iterate through data rows
     data.forEach((row, rowIndex) => {
-        const rowY = startY + (rowIndex + 1) * rowHeight;
-        const fillColor = rowIndex % 2 === 0 ? [245, 245, 245] : [255, 255, 255]; // Alternating row color
+        if (currentY + rowHeight > pageHeight) {
+            // Footer for page number and date
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Page ${pageIndex}`, 195, 285, { align: "right" });
+            doc.text(`Date Generated: ${generatedDate}`, 14, 285);
+
+            doc.addPage();
+            pageIndex += 1;
+            currentY = 20; // Reset Y position for the new page
+            currentY = addTableHeaders(currentY); // Add headers to new page
+        }
+
+        // Alternating row color
+        const fillColor = rowIndex % 2 === 0 ? [245, 245, 245] : [255, 255, 255];
         doc.setFillColor(...fillColor);
-        doc.rect(startX, rowY, columnWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
+        doc.rect(startX, currentY, columnWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
 
-        // Add cell data
-        doc.text(row.pg, startX + 2, rowY + 7);
-        doc.text(row.type, startX + columnWidths[0] + 2, rowY + 7);
-        doc.text(`${row.amount.toFixed(2)}`, startX + columnWidths[0] + columnWidths[1] + 2, rowY + 7);
-        doc.text(row.date, startX + columnWidths[0] + columnWidths[1] + columnWidths[2] + 2, rowY + 7);
+        // Add row data
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(0);
+        doc.text(row.pg, startX + 2, currentY + 7);
+        doc.text(row.type, startX + columnWidths[0] + 2, currentY + 7);
+        doc.text(`${row.amount.toFixed(2)}`, startX + columnWidths[0] + columnWidths[1] + 2, currentY + 7);
+        doc.text(row.date, startX + columnWidths[0] + columnWidths[1] + columnWidths[2] + 2, currentY + 7);
 
-        // Draw cell borders
         headers.forEach((_, cellIndex) => {
             const cellX = startX + columnWidths.slice(0, cellIndex).reduce((a, b) => a + b, 0);
-            doc.rect(cellX, rowY, columnWidths[cellIndex], rowHeight);
+            doc.rect(cellX, currentY, columnWidths[cellIndex], rowHeight);
         });
 
-        // Calculate totals
-        if (row.pg === "PG1") {
-            totalPG1 += row.amount;
-        } else if (row.pg === "PG2") {
-            totalPG2 += row.amount;
-        }
+        if (row.pg === "PG1") totalPG1 += row.amount;
+        else if (row.pg === "PG2") totalPG2 += row.amount;
+
+        currentY += rowHeight; // Move Y position down for the next row
     });
 
-    // Footer Section with totals
-    const footerY = startY + (data.length + 1) * rowHeight + 10;
-    doc.setFillColor(220, 220, 220); // Light grey background for footer row
-    doc.rect(startX, footerY, columnWidths.reduce((a, b) => a + b, 0), rowHeight * 1.5, 'F');
+    // Add footer with totals after data rows
+    if (currentY + rowHeight * 1.5 > pageHeight) {
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Page ${pageIndex}`, 195, 285, { align: "right" });
+        doc.text(`Date Generated: ${generatedDate}`, 14, 285);
 
-    // Footer content - Totals for PG1, PG2, and Grand Total
+        doc.addPage();
+        currentY = 20;
+        pageIndex += 1;
+    }
+
+    // Footer Section with totals
+    doc.setFillColor(220, 220, 220);
+    doc.rect(startX, currentY, columnWidths.reduce((a, b) => a + b, 0), rowHeight * 1.5, 'F');
+
     const totalSum = totalPG1 + totalPG2;
-    const footerTextY = footerY + rowHeight;
+    const footerTextY = currentY + rowHeight;
 
     doc.setTextColor(0);
-    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
     doc.text("Total PG1:", startX + 2, footerTextY);
     doc.text(`${totalPG1.toFixed(2)}`, startX + columnWidths[0] + 10, footerTextY);
-
     doc.text("Total PG2:", startX + columnWidths[0] + columnWidths[1] + 10, footerTextY);
     doc.text(`${totalPG2.toFixed(2)}`, startX + columnWidths[0] + columnWidths[1] + columnWidths[2] + 10, footerTextY);
 
-    // Grand Total Box
-    const totalBoxY = footerY + rowHeight * 1.8;
-    doc.setFillColor(255, 230, 180); // Light yellow background for grand total box
+    // Grand Total Section
+    const totalBoxY = currentY + rowHeight * 1.8;
+    doc.setFillColor(255, 230, 180);
     doc.rect(startX, totalBoxY, columnWidths.reduce((a, b) => a + b, 0), rowHeight, 'F');
-
     doc.setFontSize(14);
-    doc.setTextColor(0);
     doc.text(`Grand Total: ${totalSum.toFixed(2)}`, startX + 1, totalBoxY + 7);
+
+    // Final page number and generated date
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Page ${pageIndex}`, 195, 285, { align: "right" });
+    doc.text(`Date Generated: ${generatedDate}`, 14, 285);
 
     // Save PDF
     doc.save(`${selectedMonth}-expenses-report.pdf`);
