@@ -50,9 +50,33 @@ function setupChart() {
     });
 }
 
-// Add a new expense
+
+// Save expenses to local storage
+function saveExpenses() {
+    const storedExpenses = JSON.parse(localStorage.getItem('expenses')) || [];
+    
+    // Combine current expenses with stored ones and remove duplicates
+    const combinedExpenses = [...storedExpenses, ...expenses];
+    const uniqueExpenses = Array.from(new Set(combinedExpenses.map(JSON.stringify))).map(JSON.parse);
+
+    localStorage.setItem('expenses', JSON.stringify(uniqueExpenses)); // Save unique expenses to local storage
+    
+    // Reload the expenses from localStorage to reflect updates
+    loadExpenses();
+}
+
+// Load expenses from local storage
+function loadExpenses() {
+    expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+}
+
+
 function addExpense(event) {
     event.preventDefault();
+
+    // Reload current expenses to ensure no overwrites
+    loadExpenses();
+
     const pg = document.getElementById('pg').value;
     const type = document.getElementById('expenseType').value;
     const amount = parseFloat(document.getElementById('expenseAmount').value);
@@ -64,33 +88,36 @@ function addExpense(event) {
         return;
     }
 
-    const expense = { pg, type, amount, month , date };
+    // Add new expense to memory and save
+    const expense = { pg, type, amount, month, date };
     expenses.push(expense);
     saveExpenses();
+
+    // Update UI
     displayExpenses();
     updateTotalExpenses();
     updateChart();
     showToast('Expense added successfully!');
+
+    // Reset form
     document.getElementById('expenseForm').reset();
 }
 
-// Save expenses to local storage
-function saveExpenses() {
-    const monthlyData = JSON.parse(localStorage.getItem('expenses')) || [];
-
-    expenses.forEach(exp => {
-        monthlyData.push(exp);
-    });
-
-    localStorage.setItem('expenses', JSON.stringify(monthlyData)); // Save to local storage
-}
 
 function loadExpenses() {
-    expenses = JSON.parse(localStorage.getItem('expenses')) || []; 
-    displayExpenses(); // display expenses after loading
-    updateTotalExpenses(); // update total expenses after loading
-    updateChart(); // update chart after loading
+    const storedExpenses = JSON.parse(localStorage.getItem('expenses')) || [];
+    expenses = [...storedExpenses]; // Load all stored expenses into in-memory array
+    displayExpenses(); // Display expenses after loading
+    updateTotalExpenses(); // Update total expenses after loading
+    updateChart(); // Update chart after loading
 }
+
+
+//     expenses = JSON.parse(localStorage.getItem('expenses')) || []; 
+//     displayExpenses(); // display expenses after loading
+//     updateTotalExpenses(); // update total expenses after loading
+//     updateChart(); // update chart after loading
+// }
 
 // function displayExpenses() {
 //     const expenseList = document.getElementById('expenseList');
@@ -131,6 +158,7 @@ function displayExpenses() {
                     <th>Type</th>
                     <th>Amount (₹)</th>
                     <th>Date</th>
+
                 </tr>
             </thead>
             <tbody>
@@ -138,13 +166,14 @@ function displayExpenses() {
 
     // Filter and populate rows with data
     expenses.filter(exp => exp.month === selectedMonth && exp.pg === selectedPG)
-        .forEach(exp => {
+        .forEach((exp, index) => {
             table += `
                 <tr>
                     <td>${exp.pg}</td>
                     <td>${exp.type}</td>
                     <td>₹${exp.amount.toFixed(2)}</td>
                     <td>${exp.date}</td>
+                    
                 </tr>
             `;
         });
@@ -152,6 +181,7 @@ function displayExpenses() {
     table += `</tbody></table>`;
     expenseList.innerHTML = table;
 }
+
 
 // Update the chart with monthly expenses
 function updateChart() {
@@ -178,16 +208,6 @@ function updateChart() {
     }
 }
 
-// Show a temporary toast message
-function showToast(message) {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.className = 'show';
-    setTimeout(() => {
-        toast.className = toast.className.replace('show', '');
-    }, 3000);
-}
-
 // Event listeners for filtering
 document.getElementById('monthFilter').addEventListener('change', () => {
     displayExpenses();
@@ -202,61 +222,6 @@ document.getElementById('pg').addEventListener('change', () => {
 });
 
 document.getElementById('expenseForm').addEventListener('submit', addExpense);
-
-
-// function downloadCSV() {
-//     let csvContent = "data:text/csv;charset=utf-8,";
-
-//     // Table headers
-//     csvContent += "PG,Type,Amount (₹),Date\n";
-
-//     const selectedMonth = document.getElementById('monthFilter').value;
-//     const selectedPG = document.getElementById('pg').value;
-
-//     // Filtered expenses
-//     expenses.filter(exp => exp.month === selectedMonth && exp.pg === selectedPG)
-//         .forEach(exp => {
-//             const row = `${exp.pg},${exp.type},${exp.amount},${exp.date}\n`;
-//             csvContent += row;
-//         });
-
-//     // Encode and trigger download
-//     const encodedUri = encodeURI(csvContent);
-//     const link = document.createElement("a");
-//     link.setAttribute("href", encodedUri);
-//     link.setAttribute("download", `${selectedMonth}-${selectedPG}-expenses.csv`);
-//     document.body.appendChild(link); 
-//     link.click();
-//     document.body.removeChild(link); 
-// }
-
-// function downloadPDF() {
-//     const { jsPDF } = window.jspdf;
-//     const doc = new jsPDF();
-    
-//     // Table column titles
-//     doc.text("Expense Report", 14, 10);
-//     doc.text("PG", 14, 30);
-//     doc.text("Type", 40, 30);
-//     doc.text("Amount (₹)", 90, 30);
-//     doc.text("Date", 130, 30);
-    
-//     const selectedMonth = document.getElementById('monthFilter').value;
-//     const selectedPG = document.getElementById('pg').value;
-
-//     // Filtered expenses
-//     let startY = 40; // Start drawing table content from this Y position
-//     expenses.filter(exp => exp.month === selectedMonth && exp.pg === selectedPG)
-//         .forEach(exp => {
-//             doc.text(exp.pg, 14, startY);
-//             doc.text(exp.type, 40, startY);
-//             doc.text(`₹${exp.amount.toFixed(2)}`, 90, startY);
-//             doc.text(exp.date, 130, startY);
-//             startY += 10; // Move Y down for each expense
-//         });
-
-//     doc.save(`${selectedMonth}-${selectedPG}-expenses.pdf`);
-// }
 
 function downloadCSV() {
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -298,7 +263,6 @@ function downloadCSV() {
     link.click();
     document.body.removeChild(link);
 }
-
 
 function downloadPDF() {
     const { jsPDF } = window.jspdf;
@@ -427,3 +391,17 @@ function downloadPDF() {
     // Save PDF
     doc.save(`${selectedMonth}-expenses-report.pdf`);
 }
+
+function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.querySelector('p').textContent = message; // Update the message
+     toast.classList.remove('hidden');
+     toast.classList.add('visible');
+    
+        // Hide toast after 3 seconds
+     setTimeout(() => {
+    toast.classList.remove('visible');
+    toast.classList.add('hidden');
+     }, 3000);
+    }
+    
